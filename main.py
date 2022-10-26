@@ -1,3 +1,7 @@
+from datetime import datetime
+import sqlite3
+from sqlite3 import Error
+
 import cv2
 import numpy as np
 from time import sleep
@@ -14,6 +18,20 @@ delay = 30  # FPS del vídeo
 detec = []
 autos = 0
 
+""" create a database connection to the SQLite database
+    specified by db_file
+:param db_file: database file
+:return: Connection object or None
+"""
+
+conn = None
+try:
+    conn = sqlite3.connect("db_autos")
+except Error as e:
+    print(e)
+cur = conn.cursor()
+sql = "INSERT INTO registro_autos (nro_auto, fecha_hora_detectado, img) " \
+      "VALUES (?, ?, ?)"
 
 def pega_centro(x, y, w, h):
     x1 = int(w / 2)
@@ -56,6 +74,9 @@ while True:
                 autos += 1
                 cv2.line(frame1, (25, pos_linea), (1200, pos_linea), (0, 127, 255), 3)
                 detec.remove((x, y))
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                captura = sqlite3.Binary(frame1)
+                cur.execute(sql, [autos, timestamp, captura])
                 print("Auto detectado : " + str(autos))
 
     cv2.putText(frame1, "Cant de vehiculos : " + str(autos), (450, 70), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 5)
@@ -65,5 +86,6 @@ while True:
     if cv2.waitKey(1) == 27:
         break
 
+conn.commit()
 cv2.destroyAllWindows()
 cap.release()
